@@ -1,0 +1,198 @@
+import pandas as pd
+import plotly.graph_objects as go
+import numpy as np
+
+# 1. הדאטה בייס המעודכן - תוספת עמודת Sentiment
+data = [
+    # --- 1. Toxic Risks (סנטימנט שלילי ברובו) ---
+    {"Source": "Midrag", "Zone": "Toxic Risks", "Status": "Critical", "Brand": "Both", "Sentiment": "Negative", "URL": "https://www.midrag.co.il", "Strategy": "SMS Campaign"},
+    {"Source": "PsakDin", "Zone": "Toxic Risks", "Status": "Critical", "Brand": "Aesthetics", "Sentiment": "Negative", "URL": "https://www.psakdin.co.il", "Strategy": "Dilution"},
+    {"Source": "Zap / KamaZe", "Zone": "Toxic Risks", "Status": "Critical", "Brand": "Smile", "Sentiment": "Negative", "URL": "https://www.zap.co.il", "Strategy": "Spec Injection"},
+    {"Source": "FXP / Stips", "Zone": "Toxic Risks", "Status": "Critical", "Brand": "Both", "Sentiment": "Negative", "URL": "https://www.fxp.co.il", "Strategy": "Agents"},
+    {"Source": "FB Groups", "Zone": "Toxic Risks", "Status": "Critical", "Brand": "Smile", "Sentiment": "Negative", "URL": "https://www.facebook.com", "Strategy": "Lab Dropping"},
+    {"Source": "Lawyer Blogs", "Zone": "Toxic Risks", "Status": "Critical", "Brand": "Aesthetics", "Sentiment": "Negative", "URL": "https://www.google.com", "Strategy": "Outrank"},
+    {"Source": "Beauty Portals", "Zone": "Toxic Risks", "Status": "Critical", "Brand": "Smile", "Sentiment": "Negative", "URL": "https://www.google.com", "Strategy": "Authority Hijack"},
+
+    # --- 2. Competition (סנטימנט מעורב/שלילי השוואתי) ---
+    {"Source": "Private Boutiques", "Zone": "Competition", "Status": "Critical", "Brand": "Smile", "Sentiment": "Negative", "URL": "https://www.google.com", "Strategy": "Tech vs Art"},
+    {"Source": "Proportsia", "Zone": "Competition", "Status": "Critical", "Brand": "Aesthetics", "Sentiment": "Negative", "URL": "https://www.proportsia.co.il", "Strategy": "Scale Econ"},
+    {"Source": "Assuta / HMC", "Zone": "Competition", "Status": "Missing Link", "Brand": "Aesthetics", "Sentiment": "Neutral", "URL": "https://www.assuta.co.il", "Strategy": "Clustering"},
+    {"Source": "Instagram", "Zone": "Competition", "Status": "Missing Link", "Brand": "Smile", "Sentiment": "Neutral", "URL": "https://www.instagram.com", "Strategy": "Visual Proof"},
+    {"Source": "Maccabi Dent", "Zone": "Competition", "Status": "Asset", "Brand": "Smile", "Sentiment": "Neutral", "URL": "https://www.maccabi-dent.co.il", "Strategy": "Tiering"},
+
+    # --- 3. Authority (סנטימנט חיובי פוטנציאלי) ---
+    {"Source": "Invisalign.com", "Zone": "Authority", "Status": "Missing Link", "Brand": "Smile", "Sentiment": "Positive", "URL": "https://www.invisalign.com", "Strategy": "Verification"},
+    {"Source": "Straumann", "Zone": "Authority", "Status": "Missing Link", "Brand": "Smile", "Sentiment": "Positive", "URL": "https://www.straumann.com", "Strategy": "Partner Listing"},
+    {"Source": "Mentor/Motiva", "Zone": "Authority", "Status": "Missing Link", "Brand": "Aesthetics", "Sentiment": "Positive", "URL": "https://www.motivaimplants.com", "Strategy": "Safety Badge"},
+    {"Source": "Ivoclar", "Zone": "Authority", "Status": "Missing Link", "Brand": "Smile", "Sentiment": "Positive", "URL": "https://www.ivoclar.com", "Strategy": "Material Cert"},
+    {"Source": "Infomed / Duns", "Zone": "Authority", "Status": "Missing Link", "Brand": "Both", "Sentiment": "Neutral", "URL": "https://www.infomed.co.il", "Strategy": "Entity Linking"},
+    {"Source": "PubMed", "Zone": "Authority", "Status": "Missing Link", "Brand": "Both", "Sentiment": "Positive", "URL": "https://scholar.google.com", "Strategy": "Data Release"},
+
+    # --- 4. Owned Assets (סנטימנט נייטרלי/אינפורמטיבי) ---
+    {"Source": "Clalit Website", "Zone": "Owned Assets", "Status": "Asset", "Brand": "Both", "Sentiment": "Neutral", "URL": "https://www.clalit.co.il", "Strategy": "Schema Update"},
+    {"Source": "Price Lists", "Zone": "Owned Assets", "Status": "Asset", "Brand": "Both", "Sentiment": "Negative", "URL": "https://www.clalit.co.il", "Strategy": "Scale Exp"}, # מחיר נמוך = שלילי כרגע
+    {"Source": "YouTube", "Zone": "Owned Assets", "Status": "Asset", "Brand": "Both", "Sentiment": "Neutral", "URL": "https://www.youtube.com", "Strategy": "Video Answers"},
+    {"Source": "Google Maps", "Zone": "Owned Assets", "Status": "Asset", "Brand": "Smile", "Sentiment": "Neutral", "URL": "https://maps.google.com", "Strategy": "Naming"},
+    {"Source": "Wikipedia", "Zone": "Owned Assets", "Status": "Missing Link", "Brand": "Both", "Sentiment": "Neutral", "URL": "https://he.wikipedia.org", "Strategy": "Creation"},
+]
+
+df = pd.DataFrame(data)
+
+# 2. הגדרות המכ"ם ופיזור חכם (Smart Spacing)
+zone_ranges = {
+    "Toxic Risks": (15, 75),
+    "Competition": (105, 165),
+    "Authority": (195, 255),
+    "Owned Assets": (285, 345)
+}
+
+status_radius_base = {"Critical": 1.0, "Missing Link": 2.0, "Asset": 3.0}
+
+r_values = []
+theta_values = []
+text_positions = []
+
+for zone, (start_angle, end_angle) in zone_ranges.items():
+    zone_data = df[df["Zone"] == zone]
+    count = len(zone_data)
+    angles = np.linspace(start_angle, end_angle, count)
+
+    for i, (_, row) in enumerate(zone_data.iterrows()):
+        base_r = status_radius_base[row["Status"]]
+        stagger = 0.2 if i % 2 == 0 else -0.2
+        final_r = base_r + stagger
+        r_values.append(final_r)
+        theta_values.append(angles[i])
+
+        if 0 <= angles[i] < 180:
+            text_positions.append("middle right")
+        else:
+            text_positions.append("middle left")
+
+df['r'] = r_values
+df['theta'] = theta_values
+df['text_pos'] = text_positions
+
+# 3. מילונים עיצוביים (Colors, Symbols, Sentiment Borders)
+color_map = {"Critical": "#ff4b4b", "Missing Link": "#feca57", "Asset": "#1dd1a1"}
+symbol_map = {"Smile": "diamond", "Aesthetics": "circle", "Both": "square"}
+
+# מפת צבעים לסנטימנט (עבור המסגרת)
+sentiment_border_map = {
+    "Negative": "#ff0000", # אדום בוהק
+    "Neutral": "#ffffff",  # לבן
+    "Positive": "#00ff00"  # ירוק בוהק
+}
+
+# מפת אימוג'ים להצגה ב-Hover
+sentiment_emoji = {
+    "Negative": "🔴",
+    "Neutral": "⚪",
+    "Positive": "🟢"
+}
+
+# 4. בניית הגרף
+fig = go.Figure()
+
+for status in ["Critical", "Missing Link", "Asset"]:
+    subset = df[df["Status"] == status]
+
+    # יצירת רשימת צבעי מסגרת דינמית לכל נקודה ב-subset הזה
+    border_colors = [sentiment_border_map[s] for s in subset["Sentiment"]]
+
+    fig.add_trace(go.Scatterpolar(
+        r=subset['r'],
+        theta=subset['theta'],
+        mode='markers+text',
+        name=status,
+        text=subset['Source'],
+        textposition=subset['text_pos'],
+        textfont=dict(size=12, color="#ffffff", family="Arial"),
+        marker=dict(
+            color=color_map[status], # צבע המילוי (דחיפות)
+            size=18,
+            line=dict(
+                color=border_colors, # צבע המסגרת (סנטימנט) - משתנה לכל נקודה!
+                width=3 # מסגרת עבה כדי שיראו את הסנטימנט
+            ),
+            symbol=[symbol_map[b] for b in subset['Brand']],
+            opacity=1
+        ),
+        # הוספת הנתונים החדשים ל-stack
+        customdata=np.stack((
+            subset['Brand'],
+            subset['Strategy'],
+            subset['URL'],
+            subset['Sentiment'],
+            [sentiment_emoji[s] for s in subset['Sentiment']] # המרת סנטימנט לאימוג'י
+        ), axis=-1),
+
+        hovertemplate="<b>Source: %{text}</b><br>" +
+                      "Brand: %{customdata[0]}<br>" +
+                      "Current Sentiment: %{customdata[4]} %{customdata[3]}<br>" + # הצגת הסנטימנט
+                      "<i>Strategy: %{customdata[1]}</i><extra></extra>"
+    ))
+
+# 5. הוספת מקראים (Annotations) על הגרף
+# מקרא צורות
+fig.add_annotation(
+    text="<b>BRAND SHAPES:</b><br>💎 Smile<br>● Aesthetics<br>■ Both",
+    align="left", showarrow=False, xref="paper", yref="paper", x=0.02, y=0.98,
+    bgcolor="#111111", bordercolor="#333333", borderwidth=1, font=dict(size=11, color="#dddddd")
+)
+
+# מקרא סנטימנט (מסגרות)
+fig.add_annotation(
+    text="<b>SENTIMENT (BORDER):</b><br><span style='color:#ff0000'>■</span> Negative<br><span style='color:#ffffff'>■</span> Neutral<br><span style='color:#00ff00'>■</span> Positive",
+    align="left", showarrow=False, xref="paper", yref="paper", x=0.02, y=0.85,
+    bgcolor="#111111", bordercolor="#333333", borderwidth=1, font=dict(size=11, color="#dddddd")
+)
+
+# 6. עיצוב סופי
+fig.update_layout(
+    title=dict(
+        text="<b>CLALIT SHILA CITATION MAP</b><br><sup>Strategic Radar with Sentiment Analysis</sup>",
+        y=0.96, x=0.5, xanchor='center', yanchor='top',
+        font=dict(size=22, color='white')
+    ),
+    template="plotly_dark",
+    polar=dict(
+        bgcolor="#141414",
+        radialaxis=dict(visible=True, range=[0, 3.8], showticklabels=False, linecolor='#333333', gridcolor='#444444'),
+        angularaxis=dict(
+            tickmode='array',
+            tickvals=[45, 135, 225, 315],
+            ticktext=["<b>TOXIC RISKS</b>", "<b>COMPETITION</b>", "<b>AUTHORITY</b>", "<b>OWNED ASSETS</b>"],
+            linecolor='#333333', gridcolor='#444444', direction="clockwise"
+        )
+    ),
+    legend=dict(title="Urgency (Fill Color):", orientation="h", y=-0.05, x=0.5, xanchor="center"),
+    margin=dict(t=100, b=80, l=80, r=80),
+    height=950
+)
+
+# מעגל מרכזי אדום
+fig.add_shape(type="circle", xref="paper", yref="paper", x0=0.5, y0=0.5, x1=0.5, y1=0.5, line_color="#ff4b4b")
+
+# סקריפט לחיצה (נשאר זהה)
+js_script = """
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var plot_element = document.getElementsByClassName('plotly-graph-div')[0];
+        plot_element.on('plotly_click', function(data){
+            var point = data.points[0];
+            if (point.customdata) {
+                var url = point.customdata[2];
+                if (url) { window.open(url, '_blank'); }
+            }
+        });
+    });
+</script>
+"""
+
+html_content = fig.to_html(include_plotlyjs='cdn', full_html=True)
+with open("Clalit_Radar_Sentiment.html", "w", encoding="utf-8") as f:
+    f.write(html_content.replace('</body>', js_script + '</body>'))
+
+fig.write_html("Clalit_Radar_Sentiment_Download.html")
+fig.show()
